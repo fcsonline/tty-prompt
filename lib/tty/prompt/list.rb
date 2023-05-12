@@ -45,6 +45,7 @@ module TTY
         @help_color   = options.fetch(:help_color) { @prompt.help_color }
         @cycle        = options.fetch(:cycle) { false }
         @filterable   = options.fetch(:filter) { false }
+        @fuzzy        = options.fetch(:fuzzy) { false }
         @symbols      = @prompt.symbols.merge(options.fetch(:symbols, {}))
         @quiet        = options.fetch(:quiet) { @prompt.quiet }
         @filter       = []
@@ -218,6 +219,13 @@ module TTY
         if not_set
           if !filterable? || @filter.empty?
             @choices
+          elsif @fuzzy
+            filter_value = @filter.join.downcase
+            regexp = Regexp.new(Regexp.escape(filter_value).chars.join(".*"))
+
+            @filter_cache[filter_value] ||= @choices.enabled.select do |choice|
+              choice.name.to_s.downcase =~ regexp
+            end
           else
             filter_value = @filter.join.downcase
             @filter_cache[filter_value] ||= @choices.enabled.select do |choice|
@@ -514,7 +522,7 @@ module TTY
       #
       # @api private
       def filterable?
-        @filterable
+        @filterable || @fuzzy
       end
 
       # Header part showing the current filter
